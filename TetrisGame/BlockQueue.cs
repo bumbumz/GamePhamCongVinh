@@ -13,7 +13,7 @@ namespace TetrisGame
             new SBLock(),
             new TBlock(),
             new ZBlock(),
-        };
+        };// chỉ gán cho một đối tượng và ko thể đc thay đổi 
 
         private readonly Random random= new Random();
 

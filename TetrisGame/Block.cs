@@ -4,20 +4,20 @@ namespace TetrisGame
 {
     public abstract class Block
     {
-        protected abstract Position[][] Tiles { get; }
+        protected abstract Position[][] Tiles { get; }// mảng hai chiều 
 
-        protected abstract Position StartOffset { get; }
+        protected abstract Position StartOffset { get; }// vị trí khởi đầu của khối
         public abstract int Id {get;}
 
         public int rotationState;
-        public Position offset;
+        public Position offset;//lưu trữ vị trí hiện tại của một khối
 
         public Block()
         {
             offset=new Position(StartOffset.Row, StartOffset.Column);
         }
 
-        public IEnumerable<Position> TilePositions()
+        public IEnumerable<Position> TilePositions( )
         {
             foreach (Position p in Tiles[rotationState]) 
             {
@@ -25,12 +25,12 @@ namespace TetrisGame
             }
         }
 
-        public void RotateCW()
+        public void RotateCW()//xoay theo chiều kim đồng hồ
         {
             rotationState=(rotationState+1)%Tiles.Length;
         }
 
-        public void RotateCCW()
+        public void RotateCCW()// xoay ngược chiều kim đồng hồ
         {
             if(rotationState==0)
             {
@@ -41,7 +41,9 @@ namespace TetrisGame
                 rotationState--;
             }
         }
-        public void Move(int rows,int columns)
+
+        public void Move(int rows,int columns)// duy chuyền chuyền và thay đổi vị trí của khối
+
         {
             offset.Row += rows;
             offset.Column += columns;

@@ -18,12 +18,14 @@ namespace TetrisGame
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly MediaPlayer backgroundMusic = new MediaPlayer();
+
         private readonly ImageSource[] tileImages = new ImageSource[]
         {
             new BitmapImage(new Uri("Assets/TileEmpty.png", UriKind.Relative)),
             new BitmapImage(new Uri("Assets/TileCyan.png", UriKind.Relative)),
             new BitmapImage(new Uri("Assets/TileBlue.png", UriKind.Relative)),
-            new BitmapImage(new Uri("Assets/TileOrange.png", UriKind.Relative)),
+            new BitmapImage(new Uri("Assets/TileOrange.png",  UriKind.Relative)),
             new BitmapImage(new Uri("Assets/TileYellow.png", UriKind.Relative)),
             new BitmapImage(new Uri("Assets/TileGreen.png", UriKind.Relative)),
             new BitmapImage(new Uri("Assets/TilePurple.png", UriKind.Relative)),
@@ -45,11 +47,41 @@ namespace TetrisGame
         public readonly Image[,] imageControls;
         private GameState gameState=new GameState();
 
+        private readonly int maxDelay = 1000;
+        private readonly int minDelay = 50;
+        private readonly int delayDecrease = 500;
+
         public MainWindow()
         {
             InitializeComponent();
             imageControls=SetupGameCanVas(gameState.GameGrid);
+            
+            imageControls = SetupGameCanVas(gameState.GameGrid);
+            PlayBackgroundMusic();
+
+           
+
+
         }
+        private void PlayBackgroundMusic()
+        {
+            try
+            {
+                backgroundMusic.Open(new Uri("D:/ltWin/game/TetrisGame/TetrisGame/Assets/tetris-theme-korobeiniki-arranged-for-piano-186249.mp3", UriKind.Relative));
+                backgroundMusic.Volume = 1.0; // Đặt âm lượng tối đa
+                backgroundMusic.MediaEnded += (sender, e) =>
+                {
+                    backgroundMusic.Position = TimeSpan.Zero;
+                    backgroundMusic.Play();
+                };
+                backgroundMusic.Play();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi phát nhạc: " + ex.Message); // Hiện thông báo lỗi nếu có
+            }
+        }
+
 
         private Image[,] SetupGameCanVas(GameGrid grid)
         {
@@ -81,6 +113,7 @@ namespace TetrisGame
                 for (int c = 0; c < grid.Columns; c++)
                 {
                     int id = grid[r, c];
+                    imageControls[r, c].Opacity = 1;
                     imageControls[r, c].Source = tileImages[id];
                 }
             }
@@ -90,6 +123,7 @@ namespace TetrisGame
         {
             foreach (Position p in block.TilePositions())
             {
+                imageControls[p.Row, p.Column].Opacity = 1;
                 imageControls[p.Row, p.Column].Source = tileImages[block.Id];
             }
         }
@@ -99,12 +133,36 @@ namespace TetrisGame
             Block next = blockQueue.NextBlock;
             NextImage.Source = blockImages[next.Id];
         }
+        private void DrawHeldBlock(Block heldBlock)
+        {
+            if (heldBlock == null)
+            {
+                HoldImage.Source = blockImages[0];
+            }
+            else
+            {
+                HoldImage.Source = blockImages[heldBlock.Id];
+            }
+        }
+        private void DrawGhostBlock(Block block)
+        {
+            int dropDistance = gameState.BlockDropDistance();
+            foreach (Position p in block.TilePositions())
+            {
+                imageControls[p.Row + dropDistance, p.Column].Opacity = 0.25;
+                imageControls[p.Row + dropDistance, p.Column].Source = tileImages[block.Id];
+            }
+        }
 
         private void Draw(GameState gameState)
         {
             DrawGrid(gameState.GameGrid);
+            DrawGhostBlock(gameState.CurrentBlock);
             DrawBlock(gameState.CurrentBlock);
-            
+            DrawNextBlock(gameState.BlockQueue);
+            DrawHeldBlock(gameState.HeldBlock);
+            ScoreText.Text = $"Score:{gameState.Score}";
+
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -127,8 +185,18 @@ namespace TetrisGame
                 case Key.Up:
                     gameState.RotateBlockCW();
                     break;
-                case Key.Z:
+                case Key.W:
                     gameState.RotateBlockCCW();
+                    break;
+                case Key.A:
+                    gameState.HoldBlock();
+                    break;
+
+                case Key.Space:
+                    gameState.DropBlock();
+                    break;
+                case Key.M:
+                    ToggleMusic();
                     break;
                 default:
                     return;
@@ -142,23 +210,38 @@ namespace TetrisGame
         {
             Draw(gameState);
             while(!gameState.GameOver)
-            {
-                await Task.Delay(500);
+            {   
+                int delay =Math.Max(maxDelay-(gameState.Score*delayDecrease));
+                await Task.Delay(delay);
                 gameState.MoveBlockDown();
                 Draw(gameState);
             }
             GameOverMenu.Visibility = Visibility.Visible;
+            FinalScoreText.Text = $"Score:{gameState.Score}";
         }
         private  async void GameCanvas_Loaded(object sender, RoutedEventArgs e)
         {
             await GameLoop();
         }
-        private  void PlayAgain_Click(object sender, RoutedEventArgs e)
+        private async  void PlayAgain_Click(object sender, RoutedEventArgs e)
         {
             gameState = new GameState();
             GameOverMenu.Visibility = Visibility.Hidden;
-           
+            await GameLoop();
 
+
+        }
+
+        private void ToggleMusic()
+        {
+            backgroundMusic.IsMuted = !backgroundMusic.IsMuted;
+            MessageBox.Show(backgroundMusic.IsMuted ? "Music is muted!" : "Music is playing!");
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            backgroundMusic.Close();
+            base.OnClosed(e);
         }
     }
 }
